@@ -1,16 +1,22 @@
 
-My Benchopt Benchmark
-=====================
-|Build Status| |Python 3.6+|
+Benchmarking Denoisers for Plug-and-Play Priors
+===============================================
+|Build Status| |Python 3.8+|
 
-Benchopt is a package to simplify and make more transparent and
-reproducible comparisons of optimization methods.
-This benchmark is dedicated to solvers of **describe your problem**:
+The goal of this benchmark is to compare the performance of different denoisers
+in the context of plug-and-play priors. Denoisers are methods
+that take an image and a noise level as input and output a denoised image.
+They are usually trained by minimizing the following objective function:
 
+$$
+\\min_{\\theta} \\sum_{i=1}^n \\|D_\\theta(X_i + \\sigma_i w_i, \sigma_i) - X_i\\|^2
+$$
 
-$$\\min_{\\beta} f(X, \\beta),$$
+where the $X_i$ are clean images, $w_i$ is a noise noise, $\sigma_i$ is the noise level, and $D_\\theta$ is the denoiser parameterized by $\theta$.
+The idea of this benchmark is to compare the denoising performances of
+different denoisers, and relate this performances with the performance of
+plug-and-play algorithms using these denoisers.
 
-where $X$ is the matrix of data and $\\beta$ is the optimization variable.
 
 Install
 --------
