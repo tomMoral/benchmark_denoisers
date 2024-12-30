@@ -1,7 +1,8 @@
 
 Benchmarking Denoisers for Plug-and-Play Priors
 ===============================================
-|Build Status| |Python 3.8+|
+
+|Build Status| |Python 3.10+|
 
 The goal of this benchmark is to compare the performance of different denoisers
 in the context of plug-and-play priors. Denoisers are methods
@@ -38,7 +39,7 @@ Apart from the problem, options can be passed to ``benchopt run``, to restrict t
 
 Use ``benchopt run -h`` for more details about these options, or visit https://benchopt.github.io/api.html.
 
-.. |Build Status| image:: https://github.com/tomMoral/benchmark_denoisers/actoiworkflows/main.yml/badge.svg
+.. |Build Status| image:: https://github.com/tomMoral/benchmark_denoisers/actions/workflows/main.yml/badge.svg
    :target: https://github.com/tomMoral/benchmark_denoisers/actions
-.. |Python 3.6+| image:: https://img.shields.io/badge/python-3.6%2B-blue
-   :target: https://www.python.org/downloads/release/python-360/
+.. |Python 3.10+| image:: https://img.shields.io/badge/python-3.10%2B-blue
+   :target: https://www.python.org/downloads/release/python-3100/

@@ -21,6 +21,8 @@ class Objective(BaseObjective):
     # URL of the main repo for this benchmark.
     url = "https://github.com/tomMoral/benchmark_denoisers"
 
+    min_benchmark_version = "1.6.1"
+
     requirements = ["pip::deepinv"]
 
     parameters = {

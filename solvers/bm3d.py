@@ -1,6 +1,7 @@
 from benchopt import BaseSolver, safe_import_context
 
 with safe_import_context() as import_ctx:
+    import bm3d  # noqa: F401
     from deepinv.models import BM3D
 
 

@@ -1,6 +1,7 @@
 from benchopt import BaseSolver, safe_import_context
 
 with safe_import_context() as import_ctx:
+    import timm  # noqa: F401
     from deepinv.models import SCUNet
 
 
@@ -8,6 +9,8 @@ class Solver(BaseSolver):
 
     # Name to select the solver in the CLI and to display the results.
     name = 'SCUNet'
+
+    requirements = ["pip::timm"]
 
     parameters = {
         'pretrained': ["download", None]
