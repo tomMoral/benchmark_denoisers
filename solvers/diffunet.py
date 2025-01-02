@@ -18,7 +18,9 @@ class Solver(BaseSolver):
     def set_objective(self, images):
         self.images = images
 
-        self.denoiser = DiffUNet(pretrained=self.pretrained)
+        self.denoiser = DiffUNet(
+            pretrained=self.pretrained, device=images.device
+        )
 
     def run(self, _):
         pass

@@ -1,6 +1,8 @@
 from benchopt import BaseSolver, safe_import_context
 
 with safe_import_context() as import_ctx:
+    # Make it possible to check if pywt is installed
+    import pywt  # noqa: F401
     from deepinv.models import TGVDenoiser
 
 

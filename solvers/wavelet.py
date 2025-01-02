@@ -1,7 +1,8 @@
 from benchopt import BaseSolver, safe_import_context
 
 with safe_import_context() as import_ctx:
-    import pywt  # noqa: F401
+    # Make it possible to check if ptwt is installed
+    import ptwt  # noqa: F401
     from deepinv.models import WaveletDictDenoiser
 
 
@@ -14,12 +15,12 @@ class Solver(BaseSolver):
 
     # List of packages needed to run the solver. See the corresponding
     # section in objective.py
-    requirements = ["pip::PyWavelets"]
+    requirements = ["pip::ptwt"]
 
     def set_objective(self, images):
         self.images = images
 
-        self.denoiser = WaveletDictDenoiser()
+        self.denoiser = WaveletDictDenoiser(device=images.device)
 
     def run(self, _):
         pass

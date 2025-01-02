@@ -1,5 +1,6 @@
 from benchopt import BaseObjective, safe_import_context
 from benchopt.config import get_data_path
+from time import perf_counter
 
 # Protect the import with `safe_import_context()`. This allows:
 # - skipping import to speed up autocompletion in CLI.
@@ -26,7 +27,7 @@ class Objective(BaseObjective):
     requirements = ["pip::deepinv"]
 
     parameters = {
-        'task': ["denoising", "blur"],
+        'task': ["denoising"],
     }
 
     # Minimal version of benchopt required to run this benchmark.
@@ -57,6 +58,11 @@ class Objective(BaseObjective):
                 noise_model=dinv.physics.GaussianNoise(sigma=0.1),
             )
 
+        if torch.cuda.is_available():
+            self.images = self.images.cuda()
+            self.images_test = self.images_test.cuda()
+            self.physic = self.physic.cuda()
+
     def evaluate_result(self, denoiser):
         noise_levels = torch.logspace(-2, 0, 5)
 
@@ -66,13 +72,23 @@ class Objective(BaseObjective):
             noisy_images = self.images_test + sigma * torch.randn_like(
                 self.images_test
             )
-            denoised_images = denoiser(noisy_images, sigma.item())
+            with torch.no_grad():
+                t_start = perf_counter()
+                denoised_images = denoiser(noisy_images, sigma.item())
+                runtime = perf_counter() - t_start
 
-            psnr_img = psnr(denoised_images, self.images_test).detach().numpy()
-            ssim_img = ssim(denoised_images, self.images_test).detach().numpy()
+            psnr_img = psnr(denoised_images, self.images_test)
+            psnr_img = psnr_img.detach().cpu().numpy()
+            ssim_img = ssim(denoised_images, self.images_test)
+            ssim_img = ssim_img.detach().cpu().numpy()
             res.extend([
-                dict(PSNR=psnr_i, SSIM=ssim_i, sigma=sigma.item(), id_img=i)
-                for i, (psnr_i, ssim_i) in enumerate(zip(psnr_img, ssim_img))
+                {
+                    'PSNR': psnr_i,
+                    'SSIM': ssim_i,
+                    'sigma': sigma.item(),
+                    'id_img': i,
+                    'runtime': runtime,
+                } for i, (psnr_i, ssim_i) in enumerate(zip(psnr_img, ssim_img))
             ])
 
         return res

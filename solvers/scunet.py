@@ -1,6 +1,7 @@
 from benchopt import BaseSolver, safe_import_context
 
 with safe_import_context() as import_ctx:
+    # Make it possible to check if timm is installed
     import timm  # noqa: F401
     from deepinv.models import SCUNet
 
@@ -21,7 +22,9 @@ class Solver(BaseSolver):
     def set_objective(self, images):
         self.images = images
 
-        self.denoiser = SCUNet(pretrained=self.pretrained)
+        self.denoiser = SCUNet(
+            pretrained=self.pretrained, device=images.device
+        )
 
     def run(self, _):
         pass
