@@ -10,6 +10,7 @@ with safe_import_context() as import_ctx:
     import deepinv as dinv
     from deepinv.loss.metric import PSNR, SSIM
     from deepinv.utils.demo import load_degradation
+    from deepinv.optim import optim_builder
 
 
 # The benchmark objective must be named `Objective` and
@@ -27,7 +28,8 @@ class Objective(BaseObjective):
     requirements = ["pip::deepinv"]
 
     parameters = {
-        'task': ["denoising"],
+        'task': ["denoising", "blur"],
+        'sigma': [1e-3, 1e-2, 1e-1, 1]
     }
 
     # Minimal version of benchopt required to run this benchmark.
@@ -47,51 +49,65 @@ class Objective(BaseObjective):
             self.images_test = images[1:]
 
         if self.task == "denoising":
-            self.physic = dinv.physics.Denoising(sigma=0.1)
+            self.physics = dinv.physics.Denoising(sigma=self.sigma)
+            self.algo = lambda denoiser: (lambda y, _: denoiser(y, self.sigma))
         elif self.task == "blur":
             kernel_torch = load_degradation(
                 "Levin09.npy", get_data_path() / "kernels", index=1
-            )
-            self.physic = dinv.physics.BlurFFT(
+            ).unsqueeze(0).unsqueeze(0)
+            self.physics = dinv.physics.BlurFFT(
                 img_size=self.images.shape[1:],
                 filter=kernel_torch,
-                noise_model=dinv.physics.GaussianNoise(sigma=0.1),
+                noise_model=dinv.physics.GaussianNoise(sigma=self.sigma),
             )
+
+            L = self.physics.compute_norm(
+                torch.randn_like(self.images), tol=1e-4
+            )
+            step_size, lmbd = 1 / L, self.sigma * L
+
+            def algo(denoiser):
+                prior = dinv.optim.PnP(denoiser)
+                algo = optim_builder(
+                    "HQS", prior=prior, data_fidelity=dinv.optim.L2(),
+                    max_iter=100,
+                    params_algo=dict(step_size=step_size, g_param=lmbd)
+                )
+                algo.eval()
+                return algo
+
+            self.algo = algo
+        else:
+            raise ValueError(f"Unknown task {self.task}")
 
         if torch.cuda.is_available():
             self.images = self.images.cuda()
             self.images_test = self.images_test.cuda()
-            self.physic = self.physic.cuda()
+            self.physics = self.physics.cuda()
 
     def evaluate_result(self, denoiser):
-        noise_levels = torch.logspace(-2, 0, 5)
 
-        res = []
-        psnr, ssim = PSNR(), SSIM()
-        for sigma in noise_levels:
-            noisy_images = self.images_test + sigma * torch.randn_like(
-                self.images_test
-            )
-            with torch.no_grad():
-                t_start = perf_counter()
-                denoised_images = denoiser(noisy_images, sigma.item())
-                runtime = perf_counter() - t_start
+        y = self.physics(self.images_test)
 
-            psnr_img = psnr(denoised_images, self.images_test)
-            psnr_img = psnr_img.detach().cpu().numpy()
-            ssim_img = ssim(denoised_images, self.images_test)
-            ssim_img = ssim_img.detach().cpu().numpy()
-            res.extend([
-                {
-                    'PSNR': psnr_i,
-                    'SSIM': ssim_i,
-                    'sigma': sigma.item(),
-                    'id_img': i,
-                    'runtime': runtime,
-                } for i, (psnr_i, ssim_i) in enumerate(zip(psnr_img, ssim_img))
-            ])
+        restoration = self.algo(denoiser)
 
-        return res
+        with torch.no_grad():
+            t_start = perf_counter()
+            denoised_images = restoration(y, self.physics)
+            runtime = perf_counter() - t_start
+
+        psnr_img = PSNR()(denoised_images, self.images_test)
+        psnr_img = psnr_img.detach().cpu().numpy()
+        ssim_img = SSIM()(denoised_images, self.images_test)
+        ssim_img = ssim_img.detach().cpu().numpy()
+        return [
+            {
+                'PSNR': psnr_i,
+                'SSIM': ssim_i,
+                'id_img': i,
+                'runtime': runtime,
+            } for i, (psnr_i, ssim_i) in enumerate(zip(psnr_img, ssim_img))
+        ]
 
     def get_one_result(self):
         # Return one solution. The return value should be an object compatible
